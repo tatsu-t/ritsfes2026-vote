@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>立命祭2026 投票</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F2EF;
+  --c1:#F06B55;--c2:#F09244;--c3:#F5C542;--c4:#7DC96E;--c5:#5BBDD4;
+  --student:#5BBDD4;--visitor:#F5C542;
+  --dark:#1a1a1a;--mid:#666;--light:#aaa;
+}
+html,body{
+  height:100%;width:100%;overflow:hidden;
+  background:var(--bg);
+  font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+
+/* 会場選択 */
+#screen-venue{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;
+  padding:28px 18px 20px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#screen-venue h1{font-size:clamp(17px,3.5vw,24px);font-weight:900;color:var(--dark);margin-bottom:5px;text-align:center}
+#screen-venue p{font-size:12px;color:var(--light);margin-bottom:16px;text-align:center}
+.grade-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;width:100%;max-width:560px}
+.gf-btn{padding:6px 13px;border-radius:999px;border:1.5px solid #ddd;background:#fff;font-family:inherit;font-size:11px;font-weight:700;color:#666;cursor:pointer;transition:all .15s}
+.gf-btn.active{background:var(--c5);border-color:var(--c5);color:#fff}
+.venue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;width:100%;max-width:560px}
+.venue-btn{padding:13px 6px;border:2px solid #ddd;border-radius:11px;background:#fff;cursor:pointer;text-align:center;font-family:inherit;font-size:13px;font-weight:700;color:var(--dark);transition:all .15s}
+.venue-btn .grade-label{font-size:9px;color:#bbb;margin-bottom:3px}
+.venue-btn:active{background:#EEF9FC;border-color:var(--c5)}
+
+/* トップバー */
+#topbar{
+  display:none;position:fixed;top:0;left:0;right:0;height:50px;
+  align-items:center;justify-content:space-between;
+  padding:0 16px;
+  background:rgba(242,242,239,.95);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(0,0,0,.06);z-index:100;
+}
+#topbar.visible{display:flex}
+#venue-label{font-size:13px;font-weight:700;color:#555;flex:1}
+#status-badge{
+  font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;
+  margin-left:8px;flex-shrink:0;
+}
+#status-badge.open{background:#D4EFCA;color:#1a6b12}
+#status-badge.closed{background:#eee;color:#999}
+
+/* スクリーン共通 */
+.screen{display:none;position:fixed;inset:0;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px 32px}
+.screen.active{display:flex;animation:fadeUp .22s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* 受付停止中 */
+#screen-closed{background:var(--bg)}
+#screen-closed .closed-title{font-size:clamp(20px,4vw,38px);font-weight:900;color:#bbb;text-align:center;margin-bottom:12px}
+#screen-closed .closed-sub{font-size:clamp(12px,1.8vw,16px);color:#ccc;text-align:center}
+
+/* 円ボタン */
+.circle-btn{
+  border:none;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-family:inherit;font-weight:900;color:#fff;
+  box-shadow:0 10px 32px rgba(0,0,0,.15);
+  transition:transform .1s ease,box-shadow .1s ease;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.circle-btn:active{transform:scale(.89)!important;box-shadow:0 3px 10px rgba(0,0,0,.18)!important}
+.circle-btn:disabled{opacity:.35;pointer-events:none}
+
+/* ステータス選択 */
+#screen-status .title{font-size:clamp(22px,4.5vw,42px);font-weight:900;color:var(--dark);letter-spacing:-.02em;margin-bottom:clamp(36px,7vw,72px);text-align:center}
+.status-circles{display:flex;gap:clamp(18px,5vw,56px);align-items:center;justify-content:center;flex-wrap:wrap}
+.btn-student{width:clamp(155px,25vw,270px);height:clamp(155px,25vw,270px);font-size:clamp(22px,4.2vw,44px);background:var(--student)}
+.btn-visitor{width:clamp(155px,25vw,270px);height:clamp(155px,25vw,270px);font-size:clamp(22px,4.2vw,44px);background:var(--visitor)}
+
+/* 点数選択 */
+#screen-vote .title{font-size:clamp(16px,2.8vw,30px);font-weight:900;color:var(--dark);letter-spacing:-.02em;margin-bottom:6px;text-align:center}
+#screen-vote .sub{font-size:clamp(11px,1.6vw,15px);color:var(--light);margin-bottom:clamp(28px,5.5vw,56px);text-align:center}
+.score-circles{display:flex;gap:clamp(8px,2.2vw,22px);align-items:center;justify-content:center;flex-wrap:wrap}
+.score-circles .circle-btn{width:clamp(86px,13.5vw,150px);height:clamp(86px,13.5vw,150px);font-size:clamp(30px,5.8vw,72px)}
+.back-btn{position:fixed;bottom:28px;left:28px;background:rgba(0,0,0,.07);border:none;border-radius:999px;padding:11px 22px;font-family:inherit;font-size:13px;font-weight:700;color:var(--mid);cursor:pointer}
+.back-btn:active{opacity:.6}
+
+/* ありがとう */
+#screen-thanks .thanks-text{font-size:clamp(20px,3.8vw,38px);font-weight:900;color:var(--dark);text-align:center;margin-bottom:28px}
+#progress-ring{width:72px;height:72px}
+#progress-ring .bg{fill:none;stroke:#e0e0e0;stroke-width:6}
+#progress-ring .fg{fill:none;stroke:var(--c5);stroke-width:6;stroke-linecap:round;stroke-dasharray:150.8;stroke-dashoffset:150.8;transform-origin:center;transform:rotate(-90deg);transition:stroke-dashoffset .05s linear}
+
+/* 右下隠しエリア */
+#secret-area{position:fixed;bottom:0;right:0;width:80px;height:80px;z-index:200;-webkit-tap-highlight-color:transparent}
+</style>
+</head>
+<body>
+
+<!-- 会場選択 -->
+<div id="screen-venue">
+  <h1>立命祭2026 投票システム</h1>
+  <p>この端末の会場を選んでください</p>
+  <div class="grade-filters" id="grade-filters">
+    <button class="gf-btn active" data-grade="all" onclick="filterGrade(this)">全学年</button>
+    <button class="gf-btn" data-grade="中学1年" onclick="filterGrade(this)">中学1年</button>
+    <button class="gf-btn" data-grade="中学2年" onclick="filterGrade(this)">中学2年</button>
+    <button class="gf-btn" data-grade="中学3年" onclick="filterGrade(this)">中学3年</button>
+    <button class="gf-btn" data-grade="高校1年" onclick="filterGrade(this)">高校1年</button>
+    <button class="gf-btn" data-grade="高校2年" onclick="filterGrade(this)">高校2年</button>
+    <button class="gf-btn" data-grade="高校3年" onclick="filterGrade(this)">高校3年</button>
+  </div>
+  <div class="venue-grid" id="venue-grid"></div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- トップバー -->
+<div id="topbar">
+  <span id="venue-label">📍 会場名</span>
+  <span id="status-badge" class="closed">受付停止中</span>
+</div>
+
+<!-- 受付停止中 -->
+<div class="screen" id="screen-closed">
+  <p class="closed-title">現在、投票を受け付けていません</p>
+  <p class="closed-sub">スタッフが開始するまでお待ちください</p>
+</div>
+
+<!-- ステータス選択 -->
+<div class="screen" id="screen-status">
+  <p class="title">あなたはどちらですか？</p>
+  <div class="status-circles">
+    <button class="circle-btn btn-student" onclick="selectVoter('在校生')">在校生</button>
+    <button class="circle-btn btn-visitor" onclick="selectVoter('来場者')">来場者</button>
+  </div>
+</div>
+
+<!-- 点数選択 -->
+<div class="screen" id="screen-vote">
+  <p class="title">直前の発表を5段階で評価してください</p>
+  <p class="sub">※数字が大きいほど高評価</p>
+  <div class="score-circles" id="score-circles">
+    <button class="circle-btn" style="background:#F06B55" onclick="submitVote(1)">1</button>
+    <button class="circle-btn" style="background:#F09244" onclick="submitVote(2)">2</button>
+    <button class="circle-btn" style="background:#F5C542" onclick="submitVote(3)">3</button>
+    <button class="circle-btn" style="background:#7DC96E" onclick="submitVote(4)">4</button>
+    <button class="circle-btn" style="background:#5BBDD4" onclick="submitVote(5)">5</button>
+  </div>
+  <button class="back-btn" onclick="showScreen('status')">←戻る</button>
+</div>
+
+<!-- ありがとう -->
+<div class="screen" id="screen-thanks">
+  <p class="thanks-text">投票ありがとうございました。</p>
+  <svg id="progress-ring" viewBox="0 0 60 60">
+    <circle class="bg" cx="30" cy="30" r="24"/>
+    <circle class="fg" id="ring-fg" cx="30" cy="30" r="24"/>
+  </svg>
+</div>
+
+<!-- 右下隠しエリア -->
+<div id="secret-area" ontouchstart="secretTap()" onclick="secretTap()"></div>
+
+<script>
+const VENUES = [
+  {id:'c1_1',name:'中1 1組',short:'1-1',grade:'中学1年'},
+  {id:'c1_2',name:'中1 2組',short:'1-2',grade:'中学1年'},
+  {id:'c1_3',name:'中1 3組',short:'1-3',grade:'中学1年'},
+  {id:'c1_4',name:'中1 4組',short:'1-4',grade:'中学1年'},
+  {id:'c1_5',name:'中1 5組',short:'1-5',grade:'中学1年'},
+  {id:'c2_1',name:'中2 1組',short:'2-1',grade:'中学2年'},
+  {id:'c2_2',name:'中2 2組',short:'2-2',grade:'中学2年'},
+  {id:'c2_3',name:'中2 3組',short:'2-3',grade:'中学2年'},
+  {id:'c2_4',name:'中2 4組',short:'2-4',grade:'中学2年'},
+  {id:'c2_5',name:'中2 5組',short:'2-5',grade:'中学2年'},
+  {id:'c2_6',name:'中2 6組',short:'2-6',grade:'中学2年'},
+  {id:'c3_1',name:'中3 1組',short:'3-1',grade:'中学3年'},
+  {id:'c3_2',name:'中3 2組',short:'3-2',grade:'中学3年'},
+  {id:'c3_3',name:'中3 3組',short:'3-3',grade:'中学3年'},
+  {id:'c3_4',name:'中3 4組',short:'3-4',grade:'中学3年'},
+  {id:'c3_5',name:'中3 5組',short:'3-5',grade:'中学3年'},
+  {id:'c3_6',name:'中3 6組',short:'3-6',grade:'中学3年'},
+  {id:'h1_a',name:'高1 Aクラス',short:'1-A',grade:'高校1年'},
+  {id:'h1_b',name:'高1 Bクラス',short:'1-B',grade:'高校1年'},
+  {id:'h1_c',name:'高1 Cクラス',short:'1-C',grade:'高校1年'},
+  {id:'h1_d',name:'高1 Dクラス',short:'1-D',grade:'高校1年'},
+  {id:'h1_e',name:'高1 Eクラス',short:'1-E',grade:'高校1年'},
+  {id:'h1_f',name:'高1 Fクラス',short:'1-F',grade:'高校1年'},
+  {id:'h1_g',name:'高1 Gクラス',short:'1-G',grade:'高校1年'},
+  {id:'h1_h',name:'高1 Hクラス',short:'1-H',grade:'高校1年'},
+  {id:'h1_i',name:'高1 Iクラス',short:'1-I',grade:'高校1年'},
+  {id:'h1_j',name:'高1 Jクラス',short:'1-J',grade:'高校1年'},
+  {id:'h2_a',name:'高2 Aクラス',short:'2-A',grade:'高校2年'},
+  {id:'h2_b',name:'高2 Bクラス',short:'2-B',grade:'高校2年'},
+  {id:'h2_c',name:'高2 Cクラス',short:'2-C',grade:'高校2年'},
+  {id:'h2_d',name:'高2 Dクラス',short:'2-D',grade:'高校2年'},
+  {id:'h2_e',name:'高2 Eクラス',short:'2-E',grade:'高校2年'},
+  {id:'h2_f',name:'高2 Fクラス',short:'2-F',grade:'高校2年'},
+  {id:'h2_g',name:'高2 Gクラス',short:'2-G',grade:'高校2年'},
+  {id:'h2_h',name:'高2 Hクラス',short:'2-H',grade:'高校2年'},
+  {id:'h2_i',name:'高2 Iクラス',short:'2-I',grade:'高校2年'},
+  {id:'h3_a',name:'高3 Aクラス',short:'3-A',grade:'高校3年'},
+  {id:'h3_b',name:'高3 Bクラス',short:'3-B',grade:'高校3年'},
+  {id:'h3_c',name:'高3 Cクラス',short:'3-C',grade:'高校3年'},
+  {id:'h3_d',name:'高3 Dクラス',short:'3-D',grade:'高校3年'},
+  {id:'h3_e',name:'高3 Eクラス',short:'3-E',grade:'高校3年'},
+  {id:'h3_f',name:'高3 Fクラス',short:'3-F',grade:'高校3年'},
+  {id:'h3_g',name:'高3 Gクラス',short:'3-G',grade:'高校3年'},
+  {id:'h3_h',name:'高3 Hクラス',short:'3-H',grade:'高校3年'},
+  {id:'h3_i',name:'高3 Iクラス',short:'3-I',grade:'高校3年'},
+];
+
+let currentVenueId = '';
+let currentVenueName = '';
+let currentVoterType = '';
+let isSubmitting = false;
+let currentGradeFilter = 'all';
+let isOpen = false;
+let pollTimer = null;
+
+// 隠しコマンド
+let secretTapCount = 0;
+let secretTapTimer = null;
+function secretTap(){
+  secretTapCount++;
+  clearTimeout(secretTapTimer);
+  secretTapTimer = setTimeout(()=>{ secretTapCount=0; }, 2000);
+  if(secretTapCount >= 5){ secretTapCount=0; changeVenue(); }
+}
+
+// 初期化
+(function init(){
+  renderVenueGrid('all');
+  const savedId   = localStorage.getItem('venue_id');
+  const savedName = localStorage.getItem('venue_name');
+  if(savedId && savedName){
+    currentVenueId   = savedId;
+    currentVenueName = savedName;
+    launchApp();
+  }
+})();
+
+function renderVenueGrid(grade){
+  const grid = document.getElementById('venue-grid');
+  const list = grade==='all' ? VENUES : VENUES.filter(v=>v.grade===grade);
+  grid.innerHTML = list.map(v=>`
+    <button class="venue-btn" onclick="selectVenue('${v.id}','${v.name}')">
+      <div class="grade-label">${v.grade}</div>${v.short}
+    </button>
+  `).join('');
+}
+
+function filterGrade(el){
+  document.querySelectorAll('.gf-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  currentGradeFilter = el.dataset.grade;
+  renderVenueGrid(currentGradeFilter);
+}
+
+function selectVenue(id, name){
+  currentVenueId   = id;
+  currentVenueName = name;
+  localStorage.setItem('venue_id',   id);
+  localStorage.setItem('venue_name', name);
+  launchApp();
+}
+
+function launchApp(){
+  document.getElementById('screen-venue').style.display = 'none';
+  document.getElementById('topbar').classList.add('visible');
+  document.getElementById('venue-label').textContent = '📍 ' + currentVenueName;
+  pollStatus();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollStatus, 5000);
+}
+
+// ステータスをサーバーから取得して画面に反映
+async function pollStatus(){
+  try{
+    const res = await fetch(`/api/status?venueId=${currentVenueId}`, {cache:'no-store'});
+    const data = await res.json();
+    applyStatus(data.isOpen);
+  }catch(e){}
+}
+
+function applyStatus(open){
+  isOpen = open;
+  const badge = document.getElementById('status-badge');
+  badge.textContent = open ? '受付中' : '受付停止中';
+  badge.className   = open ? 'open'   : 'closed';
+
+  const active = document.querySelector('.screen.active');
+  const aid = active ? active.id : '';
+
+  if(!open){
+    // 停止中になったら → 待機画面へ（投票中・感謝画面は除く）
+    if(aid === 'screen-status' || aid === 'screen-vote'){
+      showScreen('closed');
+    }
+  } else {
+    // 開始になったら → 待機画面から在校生/来場者へ
+    if(aid === 'screen-closed' || aid === ''){
+      showScreen('status');
+    }
+  }
+}
+
+function changeVenue(){
+  if(pollTimer) clearInterval(pollTimer);
+  localStorage.removeItem('venue_id');
+  localStorage.removeItem('venue_name');
+  currentVenueId = ''; currentVenueName = '';
+  document.getElementById('topbar').classList.remove('visible');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-venue').style.display = 'flex';
+  renderVenueGrid(currentGradeFilter);
+}
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+}
+
+function selectVoter(type){
+  if(!isOpen) return;
+  currentVoterType = type;
+  showScreen('vote');
+}
+
+function submitVote(score){
+  if(isSubmitting || !isOpen) return;
+  isSubmitting = true;
+  document.querySelectorAll('#score-circles .circle-btn').forEach(b=>b.disabled=true);
+
+  fetch('/api/vote',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({venueId:currentVenueId, score, voterType:currentVoterType})
+  }).catch(()=>{});
+
+  showScreen('thanks');
+  const circ = 150.8;
+  const ring = document.getElementById('ring-fg');
+  ring.style.strokeDashoffset = circ;
+  const start = Date.now();
+  function tick(){
+    const p = Math.min((Date.now()-start)/500, 1);
+    ring.style.strokeDashoffset = circ*(1-p);
+    if(p < 1){
+      requestAnimationFrame(tick);
+    } else {
+      document.querySelectorAll('#score-circles .circle-btn').forEach(b=>b.disabled=false);
+      isSubmitting = false;
+      currentVoterType = '';
+      if(isOpen) showScreen('status');
+      else       showScreen('closed');
+    }
+  }
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>

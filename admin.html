@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立命祭2026 管理者画面</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F2F2EF;--card:#fff;--bd:#e4e4e0;--text:#1a1a1a;--sub:#888;--green:#5db85c;--red:#e55;--blue:#5BBDD4}
+body{font-family:'Noto Sans JP','Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+header{
+  background:#1a1a1a;color:#fff;padding:0 20px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+header h1{font-size:13px;font-weight:900}
+.hbtns{display:flex;gap:7px}
+.hbtn{padding:7px 12px;border:none;border-radius:7px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.hbtn:hover{opacity:.82}
+.hbtn-open{background:#5db85c;color:#fff}
+.hbtn-close{background:#555;color:#fff}
+.hbtn-csv{background:#333;color:#ccc;border:1px solid #555}
+.hbtn-reset{background:#5a1515;color:#ffaaaa;border:1px solid #7a2020}
+
+/* 統計バー */
+#stats-bar{
+  background:var(--card);border-bottom:1px solid var(--bd);
+  padding:10px 20px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;
+}
+.stat-item{display:flex;align-items:baseline;gap:4px}
+.stat-val{font-size:22px;font-weight:900}
+.stat-lbl{font-size:11px;font-weight:700;color:var(--sub)}
+#last-updated{margin-left:auto;font-size:11px;color:var(--sub)}
+.live-badge{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:#5db85c;background:#EEFAEE;padding:2px 7px;border-radius:999px}
+
+main{padding:18px 18px 60px;max-width:1200px;margin:0 auto}
+
+/* 学年セクション */
+.grade-section{margin-bottom:24px}
+.grade-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-bottom:7px;border-bottom:2px solid var(--bd)}
+.grade-title{font-size:14px;font-weight:900}
+.grade-meta{font-size:11px;color:var(--sub);font-weight:700}
+
+/* 会場カード */
+.venue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.venue-card{
+  background:var(--card);border:2px solid var(--bd);border-radius:12px;
+  padding:14px;transition:border-color .2s;
+}
+.venue-card.open{border-color:var(--green);background:#FAFFFA}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:#ddd;flex-shrink:0}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(93,184,92,.2)}
+.venue-name{font-size:13px;font-weight:900;flex:1}
+.status-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px}
+.status-tag.open{background:#D4EFCA;color:#1a6b12}
+.status-tag.closed{background:#eee;color:#999}
+
+/* スコア表示 */
+.score-block{margin-bottom:10px}
+.score-main{font-size:22px;font-weight:900;color:var(--text)}
+.score-count{font-size:11px;color:var(--sub);margin-left:4px}
+.score-split{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}
+.split-s{font-size:10px;font-weight:700;color:var(--blue);background:#EEF9FC;padding:1px 6px;border-radius:4px}
+.split-v{font-size:10px;font-weight:700;color:#c88800;background:#FFF8DC;padding:1px 6px;border-radius:4px}
+
+/* 開始/終了ボタン */
+.card-btns{display:flex;gap:6px}
+.cb{flex:1;padding:9px 4px;border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.cb:hover{opacity:.82}
+.cb:active{opacity:.6}
+.cb-open{background:var(--green);color:#fff}
+.cb-close{background:var(--red);color:#fff}
+.cb:disabled{opacity:.3;pointer-events:none}
+
+/* トースト */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(60px);background:#1a1a1a;color:#fff;padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;opacity:0;transition:all .3s;z-index:999;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔧 立命祭2026 管理者画面</h1>
+  <div class="hbtns">
+    <button class="hbtn hbtn-open"  onclick="setAllStatus('open')">▶ 全会場 開始</button>
+    <button class="hbtn hbtn-close" onclick="setAllStatus('close')">■ 全会場 終了</button>
+    <button class="hbtn hbtn-csv"   onclick="exportCSV()">📥 CSV</button>
+    <button class="hbtn hbtn-reset" onclick="confirmReset()">⚠ リセット</button>
+  </div>
+</header>
+
+<div id="stats-bar">
+  <div class="stat-item"><span class="stat-val" id="gs-total">—</span><span class="stat-lbl">投票総数</span></div>
+  <div class="stat-item"><span class="stat-val" style="color:var(--blue)" id="gs-student">—</span><span class="stat-lbl">在校生票</span></div>
+  <div class="stat-item"><span class="stat-val" style="color:#c88800" id="gs-visitor">—</span><span class="stat-lbl">来場者票</span></div>
+  <div class="stat-item"><span class="stat-val" style="color:var(--green)" id="gs-open">—</span><span class="stat-lbl">受付中会場</span></div>
+  <div id="last-updated">更新中…<span class="live-badge">● 5秒自動更新</span></div>
+</div>
+
+<main id="main-content">
+  <div style="text-align:center;padding:40px;color:#ccc;font-weight:700">読み込み中…</div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const GRADE_ORDER = ['中学1年','中学2年','中学3年','高校1年','高校2年','高校3年'];
+const VENUES = [
+  {id:'c1_1',name:'中1 1組',grade:'中学1年'},
+  {id:'c1_2',name:'中1 2組',grade:'中学1年'},
+  {id:'c1_3',name:'中1 3組',grade:'中学1年'},
+  {id:'c1_4',name:'中1 4組',grade:'中学1年'},
+  {id:'c1_5',name:'中1 5組',grade:'中学1年'},
+  {id:'c2_1',name:'中2 1組',grade:'中学2年'},
+  {id:'c2_2',name:'中2 2組',grade:'中学2年'},
+  {id:'c2_3',name:'中2 3組',grade:'中学2年'},
+  {id:'c2_4',name:'中2 4組',grade:'中学2年'},
+  {id:'c2_5',name:'中2 5組',grade:'中学2年'},
+  {id:'c2_6',name:'中2 6組',grade:'中学2年'},
+  {id:'c3_1',name:'中3 1組',grade:'中学3年'},
+  {id:'c3_2',name:'中3 2組',grade:'中学3年'},
+  {id:'c3_3',name:'中3 3組',grade:'中学3年'},
+  {id:'c3_4',name:'中3 4組',grade:'中学3年'},
+  {id:'c3_5',name:'中3 5組',grade:'中学3年'},
+  {id:'c3_6',name:'中3 6組',grade:'中学3年'},
+  {id:'h1_a',name:'高1 Aクラス',grade:'高校1年'},
+  {id:'h1_b',name:'高1 Bクラス',grade:'高校1年'},
+  {id:'h1_c',name:'高1 Cクラス',grade:'高校1年'},
+  {id:'h1_d',name:'高1 Dクラス',grade:'高校1年'},
+  {id:'h1_e',name:'高1 Eクラス',grade:'高校1年'},
+  {id:'h1_f',name:'高1 Fクラス',grade:'高校1年'},
+  {id:'h1_g',name:'高1 Gクラス',grade:'高校1年'},
+  {id:'h1_h',name:'高1 Hクラス',grade:'高校1年'},
+  {id:'h1_i',name:'高1 Iクラス',grade:'高校1年'},
+  {id:'h1_j',name:'高1 Jクラス',grade:'高校1年'},
+  {id:'h2_a',name:'高2 Aクラス',grade:'高校2年'},
+  {id:'h2_b',name:'高2 Bクラス',grade:'高校2年'},
+  {id:'h2_c',name:'高2 Cクラス',grade:'高校2年'},
+  {id:'h2_d',name:'高2 Dクラス',grade:'高校2年'},
+  {id:'h2_e',name:'高2 Eクラス',grade:'高校2年'},
+  {id:'h2_f',name:'高2 Fクラス',grade:'高校2年'},
+  {id:'h2_g',name:'高2 Gクラス',grade:'高校2年'},
+  {id:'h2_h',name:'高2 Hクラス',grade:'高校2年'},
+  {id:'h2_i',name:'高2 Iクラス',grade:'高校2年'},
+  {id:'h3_a',name:'高3 Aクラス',grade:'高校3年'},
+  {id:'h3_b',name:'高3 Bクラス',grade:'高校3年'},
+  {id:'h3_c',name:'高3 Cクラス',grade:'高校3年'},
+  {id:'h3_d',name:'高3 Dクラス',grade:'高校3年'},
+  {id:'h3_e',name:'高3 Eクラス',grade:'高校3年'},
+  {id:'h3_f',name:'高3 Fクラス',grade:'高校3年'},
+  {id:'h3_g',name:'高3 Gクラス',grade:'高校3年'},
+  {id:'h3_h',name:'高3 Hクラス',grade:'高校3年'},
+  {id:'h3_i',name:'高3 Iクラス',grade:'高校3年'},
+];
+
+let statuses = {};  // {venueId: true/false}
+let results  = [];
+let toastTimer;
+
+// データ取得
+async function fetchAll(){
+  try{
+    const [sr, rr] = await Promise.all([
+      fetch('/api/status',  {cache:'no-store'}).then(r=>r.json()),
+      fetch('/api/results', {cache:'no-store'}).then(r=>r.json()),
+    ]);
+    statuses = sr;
+    results  = rr;
+    render();
+    document.getElementById('last-updated').innerHTML =
+      `最終更新: ${new Date().toLocaleTimeString('ja-JP')}<span class="live-badge">● 5秒自動更新</span>`;
+  }catch(e){ toast('⚠ 更新失敗'); }
+}
+
+function getResult(venueId){
+  return results.find(r=>r.venueId===venueId) || {total:0,sum:0,studentTotal:0,studentSum:0,visitorTotal:0,visitorSum:0};
+}
+
+function avg(sum,total){ return total?(sum/total).toFixed(2):'—'; }
+
+function render(){
+  // 統計
+  const total   = results.reduce((s,r)=>s+r.total,0);
+  const student = results.reduce((s,r)=>s+r.studentTotal,0);
+  const visitor = results.reduce((s,r)=>s+r.visitorTotal,0);
+  const openCnt = Object.values(statuses).filter(v=>v).length;
+  document.getElementById('gs-total').textContent   = total;
+  document.getElementById('gs-student').textContent = student;
+  document.getElementById('gs-visitor').textContent = visitor;
+  document.getElementById('gs-open').textContent    = openCnt;
+
+  // 会場カード
+  let html = '';
+  for(const grade of GRADE_ORDER){
+    const gVenues = VENUES.filter(v=>v.grade===grade);
+    const gTotal  = gVenues.reduce((s,v)=>s+(getResult(v.id).total||0),0);
+    const gOpen   = gVenues.filter(v=>statuses[v.id]).length;
+    html += `<div class="grade-section">
+      <div class="grade-header">
+        <span class="grade-title">${grade}</span>
+        <span class="grade-meta">受付中 ${gOpen}/${gVenues.length} &nbsp; ${gTotal}票</span>
+      </div>
+      <div class="venue-grid">`;
+    for(const v of gVenues){
+      const isOpen = !!statuses[v.id];
+      const r = getResult(v.id);
+      const avgAll = avg(r.sum, r.total);
+      const avgS   = avg(r.studentSum, r.studentTotal);
+      const avgV   = avg(r.visitorSum,  r.visitorTotal);
+      html += `
+      <div class="venue-card ${isOpen?'open':''}" id="card-${v.id}">
+        <div class="card-top">
+          <div class="dot ${isOpen?'on':''}"></div>
+          <span class="venue-name">${v.name}</span>
+          <span class="status-tag ${isOpen?'open':'closed'}">${isOpen?'受付中':'停止中'}</span>
+        </div>
+        <div class="score-block">
+          <span class="score-main">${avgAll}</span>
+          <span class="score-count">${r.total}票</span>
+          ${r.total>0?`<div class="score-split">
+            ${r.studentTotal>0?`<span class="split-s">在校 ${avgS}</span>`:''}
+            ${r.visitorTotal>0?`<span class="split-v">来場 ${avgV}</span>`:''}
+          </div>`:''}
+        </div>
+        <div class="card-btns">
+          <button class="cb cb-open"  onclick="setStatus('${v.id}','open')"  ${isOpen?'disabled':''}>▶ 開始</button>
+          <button class="cb cb-close" onclick="setStatus('${v.id}','close')" ${!isOpen?'disabled':''}>■ 終了</button>
+        </div>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+  document.getElementById('main-content').innerHTML = html;
+}
+
+// 個別ステータス変更
+async function setStatus(venueId, action){
+  try{
+    await fetch('/api/status',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({venueId, action}),
+    });
+    statuses[venueId] = (action==='open');
+    render();
+    toast(action==='open'?`✅ ${VENUES.find(v=>v.id===venueId)?.name} 開始`:`🔴 ${VENUES.find(v=>v.id===venueId)?.name} 終了`);
+  }catch(e){ toast('⚠ エラー'); }
+}
+
+// 全会場一括
+async function setAllStatus(action){
+  const label = action==='open'?'全会場を開始':'全会場を終了';
+  if(!confirm(`${label}しますか？`)) return;
+  try{
+    await fetch('/api/status',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action: action==='open'?'open_all':'close_all'}),
+    });
+    VENUES.forEach(v=>{ statuses[v.id] = (action==='open'); });
+    render();
+    toast(action==='open'?'✅ 全会場 受付開始':'🔴 全会場 受付終了');
+  }catch(e){ toast('⚠ エラー'); }
+}
+
+// CSV
+function exportCSV(){
+  const rows=[['学年','会場名','受付状態','平均点','在校生平均','来場者平均','総票数','在校生票','来場者票']];
+  for(const grade of GRADE_ORDER){
+    VENUES.filter(v=>v.grade===grade).forEach(v=>{
+      const r=getResult(v.id);
+      rows.push([grade,v.name,statuses[v.id]?'受付中':'停止中',avg(r.sum,r.total),avg(r.studentSum,r.studentTotal),avg(r.visitorSum,r.visitorTotal),r.total,r.studentTotal,r.visitorTotal]);
+    });
+  }
+  const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='立命祭2026_投票結果.csv';a.click();
+  toast('📥 CSVをダウンロードしました');
+}
+
+// リセット
+async function confirmReset(){
+  if(!confirm('全投票データをリセットしますか？\n⚠️ この操作は取り消せません')) return;
+  const code=prompt('確認のため「RESET」と入力してください');
+  if(code!=='RESET'){toast('キャンセルしました');return;}
+  await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'RESET_ALL'})});
+  toast('🗑 データをリセットしました');
+  fetchAll();
+}
+
+// トースト
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+fetchAll();
+setInterval(fetchAll, 5000);
+</script>
+</body>
+</html>
