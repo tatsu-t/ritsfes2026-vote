@@ -59,9 +59,16 @@ async function kvHgetall(key) {
     headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
+  // 配列形式 ["field","value",...] をオブジェクトに変換
+  if (Array.isArray(json.result)) {
+    const obj = {};
+    for (let i = 0; i < json.result.length; i += 2) {
+      obj[json.result[i]] = json.result[i + 1];
+    }
+    return obj;
+  }
   return json.result || null;
 }
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'no-store');
