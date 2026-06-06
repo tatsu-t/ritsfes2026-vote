@@ -278,7 +278,6 @@ async function submitPw() {
 
     if (data.ok) {
       sessionStorage.setItem('rits_token_' + targetPage, data.token);
-      closeModal();
       location.href = '/' + targetPage;
     } else {
       document.getElementById('pw-error').textContent = 'パスワードが違います';
