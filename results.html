@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>立命祭2026 集計画面</title>
+<script>
+(async function(){
+  const token = sessionStorage.getItem('rits_token_results');
+  if (!token) { location.replace('/'); return; }
+  try {
+    const r = await fetch('/api/auth?token=' + encodeURIComponent(token) + '&page=results');
+    const d = await r.json();
+    if (!d.valid) { sessionStorage.removeItem('rits_token_results'); location.replace('/'); }
+  } catch(e) { /* ネットワークエラー時は続行 */ }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

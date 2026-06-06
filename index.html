@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>立命祭2026 投票システム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F2EF;--card:#fff;--bd:#e4e4e0;
+  --text:#1a1a1a;--sub:#888;
+  --accent:#1a1a1a;
+  --vote:#5BBDD4;--results:#7DC96E;--admin:#F09244;
+}
+html,body{
+  height:100%;background:var(--bg);
+  font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+body{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px 20px;
+}
+
+/* ロゴ */
+.logo{
+  text-align:center;margin-bottom:36px;
+}
+.logo-title{
+  font-size:22px;font-weight:900;letter-spacing:.04em;color:var(--text);
+  line-height:1.3;
+}
+.logo-sub{
+  font-size:11px;font-weight:700;color:var(--sub);
+  margin-top:4px;letter-spacing:.08em;text-transform:uppercase;
+}
+
+/* カードグリッド */
+.cards{
+  display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px;
+}
+.card{
+  background:var(--card);border-radius:14px;
+  border:2px solid var(--bd);
+  padding:22px 24px;
+  display:flex;align-items:center;gap:18px;
+  cursor:pointer;
+  transition:transform .12s, box-shadow .12s, border-color .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.card:active{transform:scale(.97)}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.09)}
+.card-vote  {border-color:var(--vote)}
+.card-results{border-color:var(--results)}
+.card-admin {border-color:var(--admin)}
+
+.card-icon{
+  width:48px;height:48px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.card-vote   .card-icon{background:#e8f7fb}
+.card-results .card-icon{background:#edf7ec}
+.card-admin  .card-icon{background:#fef3e8}
+
+.card-body{flex:1}
+.card-name{font-size:15px;font-weight:900;color:var(--text)}
+.card-desc{font-size:11px;color:var(--sub);margin-top:3px;font-weight:500}
+.card-arrow{color:#ccc;font-size:16px;font-weight:700}
+
+/* モーダルオーバーレイ */
+#modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;
+  z-index:1000;padding:20px;
+}
+#modal.show{display:flex}
+
+.modal-box{
+  background:#fff;border-radius:20px;
+  width:100%;max-width:340px;
+  padding:32px 28px 28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
+  animation:slideUp .18s ease;
+}
+@keyframes slideUp{
+  from{transform:translateY(16px);opacity:0}
+  to{transform:translateY(0);opacity:1}
+}
+.modal-icon{font-size:36px;text-align:center;margin-bottom:10px}
+.modal-title{
+  font-size:16px;font-weight:900;text-align:center;
+  color:var(--text);margin-bottom:4px;
+}
+.modal-label{
+  font-size:11px;color:var(--sub);text-align:center;
+  margin-bottom:20px;font-weight:500;
+}
+
+.pw-wrap{position:relative;margin-bottom:10px}
+#pw-input{
+  width:100%;padding:14px 16px;
+  border:2px solid var(--bd);border-radius:10px;
+  font-size:17px;font-family:inherit;
+  background:#fafaf8;color:var(--text);
+  outline:none;letter-spacing:.15em;
+  transition:border-color .15s;
+  -webkit-text-security:disc;
+}
+#pw-input:focus{border-color:#1a1a1a}
+#pw-input.error{border-color:#e55}
+
+.pw-error{
+  font-size:11px;color:#e55;font-weight:700;
+  min-height:16px;margin-bottom:14px;text-align:center;
+}
+
+.modal-btns{display:flex;gap:10px}
+#cancel-btn{
+  flex:1;padding:13px;border-radius:10px;
+  border:2px solid var(--bd);background:#fafaf8;
+  color:var(--sub);font-family:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;transition:background .12s;
+}
+#cancel-btn:active{background:#eee}
+#submit-btn{
+  flex:2;padding:13px;border-radius:10px;
+  border:none;background:#1a1a1a;
+  color:#fff;font-family:inherit;font-size:14px;font-weight:900;
+  cursor:pointer;transition:opacity .12s;
+}
+#submit-btn:active{opacity:.75}
+#submit-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* フッター */
+.footer{
+  margin-top:32px;font-size:10px;color:#bbb;
+  font-weight:500;letter-spacing:.04em;
+}
+</style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-title">立命祭2026<br>投票システム</div>
+  <div class="logo-sub">Ritsumei Festival 2026 · Vote</div>
+</div>
+
+<div class="cards">
+  <div class="card card-vote" onclick="goTo('vote')">
+    <div class="card-icon">🗳️</div>
+    <div class="card-body">
+      <div class="card-name">投票画面</div>
+      <div class="card-desc">在校生・来場者の投票端末</div>
+    </div>
+    <div class="card-arrow">›</div>
+  </div>
+
+  <div class="card card-results" onclick="goTo('results')">
+    <div class="card-icon">📊</div>
+    <div class="card-body">
+      <div class="card-name">集計画面</div>
+      <div class="card-desc">リアルタイム得点・ランキング</div>
+    </div>
+    <div class="card-arrow">›</div>
+  </div>
+
+  <div class="card card-admin" onclick="goTo('admin')">
+    <div class="card-icon">🔧</div>
+    <div class="card-body">
+      <div class="card-name">管理者画面</div>
+      <div class="card-desc">受付開閉・データ管理</div>
+    </div>
+    <div class="card-arrow">›</div>
+  </div>
+</div>
+
+<div class="footer">© 2026 立命祭実行委員会 機材担当</div>
+
+<!-- パスワード入力モーダル -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">🗳️</div>
+    <div class="modal-title" id="modal-title">投票画面</div>
+    <div class="modal-label">パスワードを入力してください</div>
+    <div class="pw-wrap">
+      <input
+        type="password"
+        id="pw-input"
+        placeholder="パスワード"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        onkeydown="if(event.key==='Enter')submitPw()"
+        oninput="clearError()"
+      >
+    </div>
+    <div class="pw-error" id="pw-error"></div>
+    <div class="modal-btns">
+      <button id="cancel-btn" onclick="closeModal()">キャンセル</button>
+      <button id="submit-btn" onclick="submitPw()">入る</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PAGE_INFO = {
+  vote:    { icon:'🗳️', title:'投票画面' },
+  results: { icon:'📊', title:'集計画面' },
+  admin:   { icon:'🔧', title:'管理者画面' },
+};
+
+let targetPage = '';
+
+// すでにセッショントークンが有効なら直接遷移
+async function tryAutoRedirect(page) {
+  const token = sessionStorage.getItem('rits_token_' + page);
+  if (!token) return false;
+  try {
+    const r = await fetch(`/api/auth?token=${encodeURIComponent(token)}&page=${page}`);
+    const d = await r.json();
+    if (d.valid) { location.href = '/' + page; return true; }
+  } catch {}
+  sessionStorage.removeItem('rits_token_' + page);
+  return false;
+}
+
+function goTo(page) {
+  targetPage = page;
+  // セッション有効チェック → 有効なら直接遷移
+  tryAutoRedirect(page).then(ok => {
+    if (!ok) showModal(page);
+  });
+}
+
+function showModal(page) {
+  const info = PAGE_INFO[page];
+  document.getElementById('modal-icon').textContent  = info.icon;
+  document.getElementById('modal-title').textContent = info.title;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-input').classList.remove('error');
+  document.getElementById('submit-btn').disabled = false;
+  document.getElementById('submit-btn').textContent = '入る';
+  document.getElementById('modal').classList.add('show');
+  setTimeout(() => document.getElementById('pw-input').focus(), 120);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  targetPage = '';
+}
+
+function clearError() {
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-input').classList.remove('error');
+}
+
+async function submitPw() {
+  const pw  = document.getElementById('pw-input').value;
+  const btn = document.getElementById('submit-btn');
+  if (!pw || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.textContent = '確認中…';
+
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, page: targetPage }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      sessionStorage.setItem('rits_token_' + targetPage, data.token);
+      closeModal();
+      location.href = '/' + targetPage;
+    } else {
+      document.getElementById('pw-error').textContent = 'パスワードが違います';
+      document.getElementById('pw-input').classList.add('error');
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+      btn.disabled = false;
+      btn.textContent = '入る';
+    }
+  } catch(e) {
+    document.getElementById('pw-error').textContent = 'エラーが発生しました。再試行してください';
+    btn.disabled = false;
+    btn.textContent = '入る';
+  }
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>

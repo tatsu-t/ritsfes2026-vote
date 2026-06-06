@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>立命祭2026 投票</title>
+<script>
+(async function(){
+  const token = sessionStorage.getItem('rits_token_vote');
+  if (!token) { location.replace('/'); return; }
+  try {
+    const r = await fetch('/api/auth?token=' + encodeURIComponent(token) + '&page=vote');
+    const d = await r.json();
+    if (!d.valid) { sessionStorage.removeItem('rits_token_vote'); location.replace('/'); }
+  } catch(e) { /* ネットワークエラー時は続行 */ }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

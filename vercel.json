@@ -4,9 +4,10 @@
     { "src": "/api/results", "dest": "/api/results.js" },
     { "src": "/api/admin",   "dest": "/api/admin.js"   },
     { "src": "/api/status",  "dest": "/api/status.js"  },
+    { "src": "/api/auth",    "dest": "/api/auth.js"    },
     { "src": "/vote",        "dest": "/vote.html"      },
     { "src": "/results",     "dest": "/results.html"   },
     { "src": "/admin",       "dest": "/admin.html"     },
-    { "src": "/",            "dest": "/vote.html"      }
+    { "src": "/",            "dest": "/index.html"     }
   ]
 }
