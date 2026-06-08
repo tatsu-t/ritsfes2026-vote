@@ -157,6 +157,16 @@ tr:nth-child(even) td{background:#fafaf8}
   opacity:0;transition:all .3s;z-index:999;white-space:nowrap;
 }
 #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* 左下固定ロゴ */
+.fixed-logo{
+  position:fixed;bottom:20px;left:20px;
+  width:44px;height:44px;
+  opacity:.18;
+  pointer-events:none;
+  z-index:10;
+}
+.fixed-logo svg{width:100%;height:100%}
 </style>
 </head>
 <body>
@@ -475,5 +485,23 @@ function toast(msg){
 fetchResults();
 setInterval(fetchResults, 5000);
 </script>
+
+<!-- 左下固定ロゴ -->
+<div class="fixed-logo">
+  <svg width="9722" height="9722" viewBox="0 0 9722 9722" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#323232" fill-rule="evenodd" d="M 3304.488037 2968.682129 L 3954.770752 2968.682129 L 3954.770752 1187.472656 L 3304.488037 1187.472656 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 5679.433594 5824.271484 L 6329.716309 5824.271484 L 6329.716309 3336.233398 L 5679.433594 3336.233398 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 7203.421875 528.117188 L 7177.914063 510.914063 L 7177.914063 565.9375 Z M 6758.679688 1187.46875 L 5974.304688 1187.46875 L 2433.679688 6436.664063 L 2972.78125 6800.296875 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 7404.09668 4467.159668 L 8054.379395 4467.159668 L 8054.379395 2488.038574 L 7404.09668 2488.038574 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 1579.824951 6926.924805 L 8082.652832 6926.924805 L 8082.652832 6276.642578 L 1579.824951 6276.642578 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 5679.433594 5852.544922 L 7206.18457 5852.544922 L 7206.18457 5202.262207 L 5679.433594 5202.262207 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 7177.914063 4184.429688 L 4982.539063 4184.429688 L 4543.914063 4834.710938 L 7177.914063 4834.710938 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 5418.515625 2374.945313 L 5340.15625 2374.945313 L 5340.15625 2491.125 Z M 8054.382813 2374.945313 L 6203.054688 2374.945313 L 5764.4375 3025.226563 L 8054.382813 3025.226563 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 2693.335938 5716.390625 L 3154.578125 5032.539063 L 2638.078125 3104.921875 L 2006.140625 3274.25 L 2662.703125 5724.59375 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 4947.070313 2374.945313 L 1579.828125 2374.945313 L 1579.828125 3025.226563 L 4508.46875 3025.226563 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 6299.367188 5571.070313 L 5760.257813 5207.4375 L 3551.570313 8481.945313 L 4335.953125 8481.945313 Z"/>
+    <path fill="#323232" fill-rule="evenodd" d="M 5050.484375 5343.625 L 4140.992188 5343.625 L 7171.632813 8481.945313 L 8081.125 8481.945313 Z"/>
+  </svg>
+</div>
 </body>
 </html>
