@@ -24,15 +24,14 @@ async function kvHincrby(key, field, value) {
   });
 }
 
-// 一時デバッグ用フォールバック: 2026-07-05 08:00 JST に失効するトークン(Vercel環境変数を設定したら削除すること)
-const VOTE_LOG_API_URL = process.env.VOTE_LOG_API_URL || 'https://rsaivote.r-sai2026.site/log-vote';
-const VOTE_LOG_API_SECRET = process.env.VOTE_LOG_API_SECRET || 'ZGVidWc6MTc4MzIwNjAwMDAwMDpiOGZkMzU5NDgwZDU3YTExYjYxMmE2MGNiODkwYzhmMGVhMGNiNDZmZGUwNDUyNWIyODg3YmE2Njg4NzUxNGFk';
+const VOTE_LOG_API_URL = process.env.VOTE_LOG_API_URL;
+const VOTE_LOG_API_SECRET = process.env.VOTE_LOG_API_SECRET;
 
 // tatsunote2上の生ログサーバーへ非同期転送。失敗しても投票結果には影響させない
 async function forwardVoteLog(payload) {
   if (!VOTE_LOG_API_URL || !VOTE_LOG_API_SECRET) return;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2500);
+  const timer = setTimeout(() => controller.abort(), 1000);
   try {
     await fetch(VOTE_LOG_API_URL, {
       method: 'POST',
@@ -64,26 +63,28 @@ module.exports = async function handler(req, res) {
 
   if (!VALID_IDS.includes(venueId))
     return res.status(400).json({ error: '無効な会場IDです' });
-  if (!score || score < 1 || score > 5)
+  if (!Number.isInteger(score) || score < 1 || score > 5)
     return res.status(400).json({ error: '無効なスコアです' });
   if (voterType !== '在校生' && voterType !== '来場者')
     return res.status(400).json({ error: '無効な投票者タイプです' });
 
   const key = `vote:${venueId}:scores`;
   try {
-    await kvHincrby(key, 'total', 1);
-    await kvHincrby(key, 'sum', score);
-    if (voterType === '在校生') {
-      await kvHincrby(key, 'student_total', 1);
-      await kvHincrby(key, 'student_sum', score);
-    } else {
-      await kvHincrby(key, 'visitor_total', 1);
-      await kvHincrby(key, 'visitor_sum', score);
-    }
-    await forwardVoteLog({
+    const kvPromise = Promise.all([
+      kvHincrby(key, 'total', 1),
+      kvHincrby(key, 'sum', score),
+      voterType === '在校生'
+        ? kvHincrby(key, 'student_total', 1)
+        : kvHincrby(key, 'visitor_total', 1),
+      voterType === '在校生'
+        ? kvHincrby(key, 'student_sum', score)
+        : kvHincrby(key, 'visitor_sum', score),
+    ]);
+    const logPromise = forwardVoteLog({
       venueId, score, voterType,
       tapX, tapY, viewportW, viewportH, userAgent, deviceUid,
     });
+    await Promise.all([kvPromise, logPromise]);
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error(err);

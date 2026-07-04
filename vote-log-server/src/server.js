@@ -31,47 +31,25 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-// api/auth.jsのトークン方式(ペイロード:有効期限:HMAC署名 のbase64url)を踏襲した使い捨てデバッグトークン検証。
-// AUTH_SECRET自体を知らなくても、AUTH_SECRETでHMAC署名した「debug:<期限>:<署名>」を発行できる。
-function verifyDebugToken(token) {
-  try {
-    const secret = process.env.AUTH_SECRET || '';
-    if (!secret) return false;
-    const decoded = Buffer.from(token, 'base64url').toString('utf8');
-    const [tag, expires, sig] = decoded.split(':');
-    if (tag !== 'debug' || !expires || !sig) return false;
-    if (Date.now() > Number(expires)) return false;
-    const expected = crypto.createHmac('sha256', secret).update(`${tag}:${expires}`).digest('hex');
-    const sigBuf = Buffer.from(sig, 'hex');
-    const expectedBuf = Buffer.from(expected, 'hex');
-    if (sigBuf.length !== expectedBuf.length) return false;
-    return crypto.timingSafeEqual(sigBuf, expectedBuf);
-  } catch {
-    return false;
-  }
-}
-
 function isAuthorized(req) {
   const header = req.get('Authorization') || '';
   const prefix = 'Bearer ';
   if (!header.startsWith(prefix)) return false;
   const token = header.slice(prefix.length);
   const secret = process.env.AUTH_SECRET || '';
-  if (secret) {
-    const tokenBuf = Buffer.from(token);
-    const secretBuf = Buffer.from(secret);
-    if (tokenBuf.length === secretBuf.length && crypto.timingSafeEqual(tokenBuf, secretBuf)) {
-      return true;
-    }
-  }
-  return verifyDebugToken(token);
+  if (!secret) return false;
+  const tokenBuf = Buffer.from(token);
+  const secretBuf = Buffer.from(secret);
+  if (tokenBuf.length !== secretBuf.length) return false;
+  return crypto.timingSafeEqual(tokenBuf, secretBuf);
 }
 
-// 0〜100000の範囲外や非整数はnullにclampする
+// 数値でなければnull。小数は四捨五入してから範囲チェックする(ブラウザのclientX等は非整数になり得るため)
 function clampInt(value, min, max) {
-  if (!Number.isInteger(value)) return null;
-  if (value < min || value > max) return null;
-  return value;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const rounded = Math.round(value);
+  if (rounded < min || rounded > max) return null;
+  return rounded;
 }
 
 function sanitizeUserAgent(value) {
@@ -104,10 +82,10 @@ app.post('/log-vote', async (req, res) => {
     return res.status(400).json({ error: '無効な投票者タイプです' });
   }
 
-  const safeTapX = clampInt(tapX, 0, 100000);
-  const safeTapY = clampInt(tapY, 0, 100000);
-  const safeViewportW = clampInt(viewportW, 0, 100000);
-  const safeViewportH = clampInt(viewportH, 0, 100000);
+  const safeTapX = clampInt(tapX, 0, 65535);
+  const safeTapY = clampInt(tapY, 0, 65535);
+  const safeViewportW = clampInt(viewportW, 0, 65535);
+  const safeViewportH = clampInt(viewportH, 0, 65535);
   const safeUserAgent = sanitizeUserAgent(userAgent);
   const safeDeviceUid = sanitizeDeviceUid(deviceUid);
 

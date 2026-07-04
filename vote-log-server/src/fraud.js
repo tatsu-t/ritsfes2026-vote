@@ -3,9 +3,9 @@
 // 正規化座標でのユークリッド距離。これ未満なら「ほぼ同じ位置」とみなす
 const POSITION_THRESHOLD = 0.03;
 // これ未満の投票間隔を「連続投票」とみなす(秒)
-const TIME_THRESHOLD_SEC = 2;
+const TIME_THRESHOLD_SEC = 0.5;
 // 同じ位置への連続投票がこの回数以上でシグナルとして採用
-const MIN_RUN_LENGTH = 3;
+const MIN_RUN_LENGTH = 5;
 
 function toFiniteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;

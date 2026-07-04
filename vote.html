@@ -257,14 +257,14 @@ function getDeviceUid(){
 
 // 端末IDの表示とQRコード生成。QRコードに渡すのは自己生成UUIDのみで外部入力を含まないためinnerHTML使用は許容
 function renderDeviceIdFooter(){
-  var uid = getDeviceUid();
-  document.getElementById('device-id-text').textContent = '端末ID: ' + uid;
   try {
+    var uid = getDeviceUid();
+    document.getElementById('device-id-text').textContent = '端末ID: ' + uid;
     var qr = qrcode(0, 'L');
     qr.addData(uid);
     qr.make();
     document.getElementById('device-qr').innerHTML = qr.createSvgTag({cellSize:3, margin:2});
-  } catch(e) { /* QRライブラリ未読込等は無視して文字表示のみで続行 */ }
+  } catch(e) { /* localStorage/crypto/QRライブラリ非対応環境でも画面表示自体は継続させる */ }
 }
 
 let currentVenueId = '';
@@ -393,6 +393,8 @@ function submitVote(score, evt){
 
   const tapX = evt && typeof evt.clientX === 'number' ? evt.clientX : null;
   const tapY = evt && typeof evt.clientY === 'number' ? evt.clientY : null;
+  let deviceUid = null;
+  try { deviceUid = getDeviceUid(); } catch(e) { /* localStorage/crypto非対応環境でも投票自体は継続させる */ }
 
   fetch('/api/vote',{
     method:'POST',
@@ -400,7 +402,7 @@ function submitVote(score, evt){
     body:JSON.stringify({
       venueId:currentVenueId, score, voterType:currentVoterType,
       tapX, tapY, viewportW:window.innerWidth, viewportH:window.innerHeight,
-      userAgent:navigator.userAgent, deviceUid:getDeviceUid()
+      userAgent:navigator.userAgent, deviceUid
     })
   }).catch(()=>{});
 
