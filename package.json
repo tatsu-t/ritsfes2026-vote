@@ -1,5 +1,11 @@
 {
   "name": "ritsfes2026-vote",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "dev": "node dev/server.js"
+  },
+  "devDependencies": {
+    "express": "^4.19.2"
+  }
 }

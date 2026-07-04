@@ -1,0 +1,64 @@
+version: '3.8'
+
+networks:
+  ritsfes-vote-net:
+    driver: bridge
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: ritsfes-vote-db
+    restart: unless-stopped
+    networks:
+      - ritsfes-vote-net
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ritsfes_vote
+      MYSQL_USER: ritsfes
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ritsfes-vote-db-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: ritsfes-vote-api
+    restart: unless-stopped
+    networks:
+      - ritsfes-vote-net
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "100.67.16.84:4001:4001"
+    environment:
+      DB_HOST: db
+      DB_USER: ritsfes
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ritsfes_vote
+      AUTH_SECRET: ${AUTH_SECRET}
+      PORT: ${PORT:-4000}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_PORT: ${ADMIN_PORT:-4001}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ritsfes-vote-cloudflared
+    restart: unless-stopped
+    networks:
+      - ritsfes-vote-net
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+
+volumes:
+  ritsfes-vote-db-data:

@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS votes (
+  id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  venue_id     VARCHAR(16)  NOT NULL,
+  voter_type   VARCHAR(8)   NOT NULL,
+  score        TINYINT UNSIGNED NOT NULL,
+  tap_x        SMALLINT UNSIGNED NULL,
+  tap_y        SMALLINT UNSIGNED NULL,
+  viewport_w   SMALLINT UNSIGNED NULL,
+  viewport_h   SMALLINT UNSIGNED NULL,
+  user_agent   VARCHAR(512) NULL,
+  device_uid   CHAR(36) NULL,
+  created_at   DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX idx_venue_created (venue_id, created_at),
+  INDEX idx_device (device_uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS device_notes (
+  device_uid CHAR(36) NOT NULL PRIMARY KEY,
+  note VARCHAR(500) NOT NULL DEFAULT '',
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -5,6 +5,7 @@ const VENUE_IDS = [
   'h1_a','h1_b','h1_c','h1_d','h1_e','h1_f','h1_g','h1_h','h1_i','h1_j',
   'h2_a','h2_b','h2_c','h2_d','h2_e','h2_f','h2_g','h2_h','h2_i',
   'h3_a','h3_b','h3_c','h3_d','h3_e','h3_f','h3_g','h3_h','h3_i',
+  'test_1',
 ];
 
 function getKVConfig() {

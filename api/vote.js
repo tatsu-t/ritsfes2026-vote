@@ -5,6 +5,7 @@ const VALID_IDS = [
   'h1_a','h1_b','h1_c','h1_d','h1_e','h1_f','h1_g','h1_h','h1_i','h1_j',
   'h2_a','h2_b','h2_c','h2_d','h2_e','h2_f','h2_g','h2_h','h2_i',
   'h3_a','h3_b','h3_c','h3_d','h3_e','h3_f','h3_g','h3_h','h3_i',
+  'test_1',
 ];
 
 function getKVConfig() {
@@ -23,6 +24,32 @@ async function kvHincrby(key, field, value) {
   });
 }
 
+// 一時デバッグ用フォールバック: 2026-07-05 08:00 JST に失効するトークン(Vercel環境変数を設定したら削除すること)
+const VOTE_LOG_API_URL = process.env.VOTE_LOG_API_URL || 'https://rsaivote.r-sai2026.site/log-vote';
+const VOTE_LOG_API_SECRET = process.env.VOTE_LOG_API_SECRET || 'ZGVidWc6MTc4MzIwNjAwMDAwMDpiOGZkMzU5NDgwZDU3YTExYjYxMmE2MGNiODkwYzhmMGVhMGNiNDZmZGUwNDUyNWIyODg3YmE2Njg4NzUxNGFk';
+
+// tatsunote2上の生ログサーバーへ非同期転送。失敗しても投票結果には影響させない
+async function forwardVoteLog(payload) {
+  if (!VOTE_LOG_API_URL || !VOTE_LOG_API_SECRET) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    await fetch(VOTE_LOG_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${VOTE_LOG_API_SECRET}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -30,7 +57,10 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { venueId, score, voterType } = req.body || {};
+  const {
+    venueId, score, voterType,
+    tapX, tapY, viewportW, viewportH, userAgent, deviceUid,
+  } = req.body || {};
 
   if (!VALID_IDS.includes(venueId))
     return res.status(400).json({ error: '無効な会場IDです' });
@@ -50,6 +80,10 @@ module.exports = async function handler(req, res) {
       await kvHincrby(key, 'visitor_total', 1);
       await kvHincrby(key, 'visitor_sum', score);
     }
+    await forwardVoteLog({
+      venueId, score, voterType,
+      tapX, tapY, viewportW, viewportH, userAgent, deviceUid,
+    });
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error(err);

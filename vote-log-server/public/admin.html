@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>投票ログ管理パネル</title>
+<style>
+  :root {
+    --surface-1:      #fcfcfb;
+    --page-plane:      #f9f9f7;
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
+    --gridline:        #e1e0d9;
+    --baseline:        #c3c2b7;
+    --border:          rgba(11,11,11,0.10);
+    --series-1:        #2a78d6; /* blue */
+    --series-1-wash:   rgba(42,120,214,0.10);
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-serious:  #ec835a;
+    --status-critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1:      #1a1a19;
+      --page-plane:      #0d0d0d;
+      --text-primary:    #ffffff;
+      --text-secondary:  #c3c2b7;
+      --text-muted:      #898781;
+      --gridline:        #2c2c2a;
+      --baseline:        #383835;
+      --border:          rgba(255,255,255,0.10);
+      --series-1:        #3987e5;
+      --series-1-wash:   rgba(57,135,229,0.14);
+      --status-good:     #0ca30c;
+      --status-warning:  #fab219;
+      --status-serious:  #ec835a;
+      --status-critical: #d03b3b;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: "Noto Sans JP", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+  }
+
+  header {
+    padding: 24px clamp(16px, 4vw, 40px) 8px;
+  }
+  header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  main {
+    padding: 8px clamp(16px, 4vw, 40px) 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-tile .label {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+  .stat-tile .value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 4px;
+    font-variant-numeric: proportional-nums;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .chart-card, .table-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .chart-card h2, .table-card h2 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  .chart-wrap { width: 100%; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+
+  .bar { fill: var(--series-1); cursor: pointer; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; shape-rendering: crispEdges; }
+  .axis-line { stroke: var(--baseline); stroke-width: 1; shape-rendering: crispEdges; }
+  .axis-label { fill: var(--text-muted); font-size: 10px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; white-space: nowrap; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+  td.num { font-variant-numeric: tabular-nums; }
+  td.device { color: var(--text-secondary); font-family: ui-monospace, monospace; font-size: 12px; }
+
+  .note-cell { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .note-input {
+    flex: 1;
+    min-width: 160px;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  .note-save-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .note-save-btn:hover { background: var(--series-1-wash); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+  .badge-critical {
+    color: var(--status-critical);
+    background: rgba(208,59,59,0.12);
+    border: 1px solid rgba(208,59,59,0.30);
+  }
+  .badge-warning {
+    color: #8a5a00;
+    background: rgba(250,178,25,0.18);
+    border: 1px solid rgba(250,178,25,0.40);
+  }
+  @media (prefers-color-scheme: dark) {
+    .badge-warning { color: var(--status-warning); }
+  }
+
+  .empty-note {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 12px 0;
+  }
+
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--surface-1);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    z-index: 10;
+    white-space: nowrap;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+  #tooltip[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>投票ログ管理パネル</h1>
+    <p>不正投票検知・分析(Tailscaleネットワーク内限定)</p>
+  </header>
+  <main>
+    <section class="stat-row" id="summary-stats">
+      <div class="stat-tile"><div class="label">総投票数</div><div class="value" id="stat-total">-</div></div>
+      <div class="stat-tile"><div class="label">怪しい投票件数</div><div class="value" id="stat-suspicious">-</div></div>
+      <div class="stat-tile"><div class="label">怪しい投票の割合</div><div class="value" id="stat-ratio">-</div></div>
+    </section>
+
+    <section class="chart-grid">
+      <div class="chart-card">
+        <h2>投票タイムライン(5分単位)</h2>
+        <div class="chart-wrap"><svg id="svg-timeline" viewBox="0 0 600 260"></svg></div>
+      </div>
+      <div class="chart-card">
+        <h2>スコア分布</h2>
+        <div class="chart-wrap"><svg id="svg-score" viewBox="0 0 600 260"></svg></div>
+      </div>
+      <div class="chart-card">
+        <h2>デバイス別投票数</h2>
+        <div class="chart-wrap"><svg id="svg-device" viewBox="0 0 600 260"></svg></div>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <h2>怪しい投票一覧(suspicionScore降順)</h2>
+      <div class="table-wrap">
+        <table id="votes-table">
+          <thead>
+            <tr>
+              <th>device_uid</th>
+              <th>会場ID</th>
+              <th>投票者</th>
+              <th>スコア</th>
+              <th>タップ座標</th>
+              <th>前回との時間差</th>
+              <th>前回との位置差</th>
+              <th>判定理由</th>
+              <th>投票時刻</th>
+            </tr>
+          </thead>
+          <tbody id="votes-tbody"></tbody>
+        </table>
+        <div class="empty-note" id="votes-empty" hidden>怪しい投票は検出されていません。</div>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <h2>デバイス一覧</h2>
+      <div class="table-wrap">
+        <table id="devices-table">
+          <thead>
+            <tr>
+              <th>device_uid</th>
+              <th>投票数</th>
+              <th>初回投票</th>
+              <th>最終投票</th>
+              <th>メモ</th>
+            </tr>
+          </thead>
+          <tbody id="devices-tbody"></tbody>
+        </table>
+        <div class="empty-note" id="devices-empty" hidden>デバイスが見つかりません。</div>
+      </div>
+    </section>
+  </main>
+  <div id="tooltip" hidden></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var tooltipEl = document.getElementById('tooltip');
+
+  function showTooltip(html, clientX, clientY) {
+    tooltipEl.innerHTML = html;
+    tooltipEl.style.left = clientX + 'px';
+    tooltipEl.style.top = clientY + 'px';
+    tooltipEl.hidden = false;
+  }
+  function hideTooltip() {
+    tooltipEl.hidden = true;
+  }
+
+  function el(tag, attrs) {
+    var node = document.createElementNS(SVG_NS, tag);
+    for (var key in attrs) {
+      node.setAttribute(key, attrs[key]);
+    }
+    return node;
+  }
+
+  // 上2隅のみ角丸、ベースラインは直角のバー用path
+  function roundedTopBarPath(x, y, width, height, radius) {
+    var r = Math.max(0, Math.min(radius, width / 2, height));
+    if (height <= 0) return '';
+    return [
+      'M', x, y + height,
+      'L', x, y + r,
+      'Q', x, y, x + r, y,
+      'L', x + width - r, y,
+      'Q', x + width, y, x + width, y + r,
+      'L', x + width, y + height,
+      'Z',
+    ].join(' ');
+  }
+
+  // 汎用の単系列棒グラフ描画。items: [{label, value}]
+  function renderBarChart(svgEl, items, opts) {
+    opts = opts || {};
+    var formatValue = opts.formatValue || function (v) { return String(v); };
+    while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+
+    var width = 600, height = 260;
+    var padding = { top: 12, right: 12, bottom: 36, left: 40 };
+    var innerW = width - padding.left - padding.right;
+    var innerH = height - padding.top - padding.bottom;
+
+    if (!items.length) {
+      var note = el('text', { x: width / 2, y: height / 2, 'text-anchor': 'middle', class: 'axis-label' });
+      note.textContent = 'データがありません';
+      svgEl.appendChild(note);
+      return;
+    }
+
+    var maxValue = Math.max.apply(null, items.map(function (d) { return d.value; }));
+    if (maxValue <= 0) maxValue = 1;
+    var niceMax = maxValue * 1.15;
+
+    var tickCount = 4;
+    for (var t = 0; t <= tickCount; t++) {
+      var ty = padding.top + innerH - (innerH * t) / tickCount;
+      svgEl.appendChild(el('line', {
+        x1: padding.left, x2: width - padding.right, y1: ty, y2: ty, class: 'gridline',
+      }));
+      var tickValue = Math.round((niceMax * t) / tickCount);
+      var label = el('text', {
+        x: padding.left - 8, y: ty + 3, 'text-anchor': 'end', class: 'axis-label',
+      });
+      label.textContent = tickValue.toLocaleString('ja-JP');
+      svgEl.appendChild(label);
+    }
+    svgEl.appendChild(el('line', {
+      x1: padding.left, x2: width - padding.right,
+      y1: padding.top + innerH, y2: padding.top + innerH, class: 'axis-line',
+    }));
+
+    var n = items.length;
+    var slotWidth = innerW / n;
+    var barWidth = Math.min(24, Math.max(2, slotWidth - 4));
+
+    // x軸ラベルは間引いて衝突を避ける(最大12個程度)
+    var labelStride = Math.max(1, Math.ceil(n / 12));
+
+    items.forEach(function (item, i) {
+      var slotX = padding.left + i * slotWidth;
+      var barH = (item.value / niceMax) * innerH;
+      var barY = padding.top + innerH - barH;
+      var barX = slotX + (slotWidth - barWidth) / 2;
+
+      var path = el('path', {
+        d: roundedTopBarPath(barX, barY, barWidth, barH, 4),
+        class: 'bar',
+      });
+      path.addEventListener('mouseenter', function (ev) {
+        showTooltip(
+          '<strong>' + item.label + '</strong><br>' + formatValue(item.value),
+          ev.clientX, ev.clientY
+        );
+      });
+      path.addEventListener('mousemove', function (ev) {
+        tooltipEl.style.left = ev.clientX + 'px';
+        tooltipEl.style.top = ev.clientY + 'px';
+      });
+      path.addEventListener('mouseleave', hideTooltip);
+      svgEl.appendChild(path);
+
+      if (i % labelStride === 0) {
+        var xLabel = el('text', {
+          x: slotX + slotWidth / 2, y: height - padding.bottom + 16,
+          'text-anchor': 'middle', class: 'axis-label',
+        });
+        xLabel.textContent = item.label;
+        svgEl.appendChild(xLabel);
+      }
+    });
+  }
+
+  function formatBucketTime(iso) {
+    var d = new Date(iso);
+    var hh = String(d.getHours()).padStart(2, '0');
+    var mm = String(d.getMinutes()).padStart(2, '0');
+    return hh + ':' + mm;
+  }
+
+  function renderSummary(summary) {
+    document.getElementById('stat-total').textContent = summary.totalVotes.toLocaleString('ja-JP');
+    document.getElementById('stat-suspicious').textContent = summary.suspiciousCount.toLocaleString('ja-JP');
+    var ratio = summary.totalVotes > 0 ? (summary.suspiciousCount / summary.totalVotes) * 100 : 0;
+    document.getElementById('stat-ratio').textContent = ratio.toFixed(1) + '%';
+  }
+
+  function renderTimeline(timeline) {
+    var items = timeline.map(function (t) {
+      return { label: formatBucketTime(t.bucket), value: t.count, fullLabel: t.bucket };
+    });
+    renderBarChart(document.getElementById('svg-timeline'), items, {
+      formatValue: function (v) { return v.toLocaleString('ja-JP') + ' 票'; },
+    });
+  }
+
+  function renderScoreDistribution(scoreDistribution) {
+    var items = [1, 2, 3, 4, 5].map(function (score) {
+      return { label: String(score), value: scoreDistribution[score] || 0 };
+    });
+    renderBarChart(document.getElementById('svg-score'), items, {
+      formatValue: function (v) { return v.toLocaleString('ja-JP') + ' 票'; },
+    });
+  }
+
+  function renderDeviceHistogram(deviceVoteCounts) {
+    var labelMap = { '1': '1票', '2-5': '2〜5票', '6-20': '6〜20票', '21+': '21票以上' };
+    var items = deviceVoteCounts.map(function (d) {
+      return { label: labelMap[d.bucket] || d.bucket, value: d.count };
+    });
+    renderBarChart(document.getElementById('svg-device'), items, {
+      formatValue: function (v) { return v.toLocaleString('ja-JP') + ' デバイス'; },
+    });
+  }
+
+  // votes APIの値はDB由来で信頼できないため、DOM構築時は必ずtextContentで挿入する
+  function reasonBadge(reason) {
+    var span = document.createElement('span');
+    if (reason === 'same_position_streak') {
+      span.className = 'badge badge-critical';
+      span.textContent = '● 同一位置連続';
+    } else if (reason === 'rapid_fire') {
+      span.className = 'badge badge-warning';
+      span.textContent = '▲ 連続投票';
+    } else {
+      span.className = 'badge';
+      span.textContent = String(reason);
+    }
+    return span;
+  }
+
+  function textCell(value, className) {
+    var td = document.createElement('td');
+    if (className) td.className = className;
+    td.textContent = value;
+    return td;
+  }
+
+  function renderVotesTable(votes) {
+    var tbody = document.getElementById('votes-tbody');
+    var emptyNote = document.getElementById('votes-empty');
+    tbody.innerHTML = '';
+
+    if (!votes.length) {
+      emptyNote.hidden = false;
+      return;
+    }
+    emptyNote.hidden = true;
+
+    votes.forEach(function (v) {
+      var tr = document.createElement('tr');
+
+      var deviceShort = v.deviceUid ? v.deviceUid.slice(0, 8) + '…' : '-';
+      var tap = (v.tapX != null && v.tapY != null) ? ('(' + v.tapX + ', ' + v.tapY + ')') : '-';
+      var timeDelta = v.timeDeltaSec != null ? v.timeDeltaSec.toFixed(1) + ' 秒' : '-';
+      var posDelta = v.posDelta != null ? v.posDelta.toFixed(3) : '-';
+      var createdAt = new Date(v.createdAt).toLocaleString('ja-JP');
+
+      tr.appendChild(textCell(deviceShort, 'device'));
+      tr.appendChild(textCell(v.venueId));
+      tr.appendChild(textCell(v.voterType));
+      tr.appendChild(textCell(v.score, 'num'));
+      tr.appendChild(textCell(tap, 'num'));
+      tr.appendChild(textCell(timeDelta, 'num'));
+      tr.appendChild(textCell(posDelta, 'num'));
+
+      var reasonsTd = document.createElement('td');
+      if (v.reasons && v.reasons.length) {
+        v.reasons.forEach(function (r) { reasonsTd.appendChild(reasonBadge(r)); });
+      } else {
+        reasonsTd.textContent = '-';
+      }
+      tr.appendChild(reasonsTd);
+
+      tr.appendChild(textCell(createdAt));
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function saveDeviceNote(deviceUid, input, button) {
+    var originalLabel = button.textContent;
+    button.disabled = true;
+    try {
+      var res = await fetch('/admin/api/devices/' + encodeURIComponent(deviceUid) + '/note', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: input.value }),
+      });
+      if (!res.ok) throw new Error('保存に失敗しました');
+      button.textContent = '保存しました';
+    } catch (err) {
+      console.error(err);
+      button.textContent = '失敗しました';
+    } finally {
+      setTimeout(function () {
+        button.textContent = originalLabel;
+        button.disabled = false;
+      }, 1500);
+    }
+  }
+
+  function renderDevicesTable(devices) {
+    var tbody = document.getElementById('devices-tbody');
+    var emptyNote = document.getElementById('devices-empty');
+    tbody.innerHTML = '';
+
+    if (!devices.length) {
+      emptyNote.hidden = false;
+      return;
+    }
+    emptyNote.hidden = true;
+
+    devices.forEach(function (d) {
+      var tr = document.createElement('tr');
+
+      tr.appendChild(textCell(d.deviceUid, 'device'));
+      tr.appendChild(textCell(d.voteCount, 'num'));
+      tr.appendChild(textCell(new Date(d.firstSeen).toLocaleString('ja-JP')));
+      tr.appendChild(textCell(new Date(d.lastSeen).toLocaleString('ja-JP')));
+
+      var noteTd = document.createElement('td');
+      var wrap = document.createElement('div');
+      wrap.className = 'note-cell';
+
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'note-input';
+      input.value = d.note || '';
+      input.maxLength = 500;
+
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'note-save-btn';
+      button.textContent = '保存';
+      button.addEventListener('click', function () {
+        saveDeviceNote(d.deviceUid, input, button);
+      });
+
+      wrap.appendChild(input);
+      wrap.appendChild(button);
+      noteTd.appendChild(wrap);
+      tr.appendChild(noteTd);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function loadData() {
+    try {
+      var [summaryRes, votesRes, devicesRes] = await Promise.all([
+        fetch('/admin/api/summary'),
+        fetch('/admin/api/votes?suspiciousOnly=1&limit=500'),
+        fetch('/admin/api/devices'),
+      ]);
+      if (!summaryRes.ok || !votesRes.ok || !devicesRes.ok) {
+        throw new Error('データ取得に失敗しました');
+      }
+      var summary = await summaryRes.json();
+      var votes = await votesRes.json();
+      var devices = await devicesRes.json();
+
+      renderSummary(summary);
+      renderTimeline(summary.timeline);
+      renderScoreDistribution(summary.scoreDistribution);
+      renderDeviceHistogram(summary.deviceVoteCounts);
+      renderVotesTable(votes);
+      renderDevicesTable(devices);
+    } catch (err) {
+      console.error(err);
+      document.querySelector('header p').textContent = 'データの読み込みに失敗しました。再読み込みしてください。';
+    }
+  }
+
+  loadData();
+})();
+</script>
+</body>
+</html>
